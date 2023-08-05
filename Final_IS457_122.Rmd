@@ -1,0 +1,899 @@
+---
+title: "Final_IS_457_122"
+author: "Class ID 122"
+date: '2019-04-15'
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+## Part 1
+
+#### Q1:
+
+```{r}
+# Loading the dataset
+Airbnb_Sydney <- read.csv(file = "Airbnb Sydney.csv")
+```
+
+```{r}
+# Exploring dataset a little bit
+head(Airbnb_Sydney)
+names(Airbnb_Sydney)
+dim(Airbnb_Sydney)
+class(Airbnb_Sydney)
+anyNA((Airbnb_Sydney))
+sum(is.na.data.frame(Airbnb_Sydney))
+```
+
+
+##### 1.1
+
+I combed through the csv file to look for possible missing values and found several possbilities including the usual NA values. I wrote a function to find and sum up the instances of these missing data for each column. My results show that the neighborhood_overview, house_rules, host_response_time host_response_rate, host_identity_verified, city, zipcode, bathrooms, bedrooms, cleaning_fee, review_scores_rating, review_scores_accuracy, review_scores_cleanliness, review_scores_checkin, and review_scores_communication columns have a missing values. Those missing values are NA, N/A and empty strings.  
+
+```{r}
+missing_everything = function(x){
+  # this function takes on argument and finds a list of possible missing values and returns a vector with the number of times that missing value occurs
+  z = sum(as.numeric(is.na(x)))
+  y = sum(as.numeric(x==""))
+  x = sum(as.numeric(x=="N/A"))
+  w = sum(as.numeric(x=="[]"))
+  v = sum(as.numeric(x=="æ,%å•1/4"))
+  u = sum(as.numeric(x=="#NAME?"))
+  t = sum(as.numeric(x=="."))
+  s = sum(as.numeric(x=="/"))
+  r = sum(as.numeric(x=="(URL HIDDEN)"))
+  q = sum(as.numeric(x=="(Other)"))
+  return(c(z,y,x,w,v,u,t,s,r,q))
+}
+
+# calling the function using apply()
+apply(Airbnb_Sydney,2,missing_everything)
+
+```
+
+##### 1.2
+
+To deal with this, I will be keeping the NA's in my dataset, but I will be replacing all other missing values with NA. This way I can easily exclude them when needed. I will keep the NA's in the dataset because I don't want to exlcude those rows that contain NA's from the dataset as I want to include that data in my analysis. I feel this is will help me get the most out of the data in terms of insights. 
+
+##### 1.3
+
+Handling the missing values this way will mean I will have to be mindful of the type of analysis I'm doing, and decide whether or not I have to explude the NA's. There will be cases where I have to exclude them to do an operation in R. However, I think my output and report should also reflect the amount of missing data, to help with the interpretation of my results. Knowing that there is missing data (and how much) could influence decisions that are made using this analysis. I think it would bias the results if I did not include the NA values. 
+
+##### 1.4
+
+I replaced the missing values "N/A" and "" with NA, to make missing values consistent and easy to exclude later.
+
+```{r}
+# Replacing weird missing values with NA
+Airbnb_Sydney$host_response_time[Airbnb_Sydney$host_response_time=="N/A"] <- NA
+Airbnb_Sydney$host_response_rate[Airbnb_Sydney$host_response_rate=="N/A"] <- NA
+Airbnb_Sydney$neighborhood_overview[Airbnb_Sydney$neighborhood_overview==""] <- NA
+Airbnb_Sydney$house_rules[Airbnb_Sydney$house_rules==""] <- NA
+Airbnb_Sydney$zipcode[Airbnb_Sydney$zipcode==""] <- NA
+Airbnb_Sydney$cleaning_fee[Airbnb_Sydney$cleaning_fee==""] <- NA
+
+#apply(Airbnb_Sydney,2,missing_everything)
+sum(is.na.data.frame(Airbnb_Sydney))
+
+apply(is.na(Airbnb_Sydney), 2, sum)
+
+```
+
+##### 1.5 
+
+```{r}
+dim(Airbnb_Sydney)
+# The dim will reamin the same, because I have not removed any NA values yet. 
+```
+
+##### 1.6 
+
+I will remove any weird characters like dollar signs from (potentially) numeric columns. I will look at all data types. The date columns may need to be formatted, or broke up for more detailed analysis (for instance to look at a single year, month, or day). All classes of the columns should be doubled checked, because they may need to be re-assgined to be an integer from a character, for instance. I would double check that the data was read in correctly with the right headers. To analyze text data, I would parse and remove any strange characters to understand what words or how many words are in a row. 
+
+#### Q2
+
+I looked at the overall distribution of the dataframe and decided to focus, at first, the the property type, the city, price and host since columns. I felt these variables would offer the most insight into the dataset. 
+
+```{r}
+# The funcitons below were used to help me understand the dataset:
+# summary and str are commented out because output is so large
+#summary(Airbnb_Sydney)
+#str(Airbnb_Sydney)
+names(Airbnb_Sydney)
+```
+
+Looking closer at the these columns, I see there are a large number of cities and property types to work with as character and factor variables. I also found an "Other" type in the city variable, which I have decided to leave in for now, but may turn into an NA. However, I don't think "other" means the same thing as NA, so I will decide on a case by case basis on what to do with that. I also looked at price. I removed the dollar sign from the data so I could look at it more closely. I also looked at the distribution and can see that the majority of the prices are at or below 200 dollars. I also looked at host_since variable, and we can see that we have data from 2009 to 2018 to work with. I also looked at cleaning fees, super host status, and review scores. 
+
+```{r}
+#Airbnb_Sydney$city
+class(Airbnb_Sydney$city)
+anyNA(Airbnb_Sydney$city)
+head(summary(as.factor(Airbnb_Sydney$city)))
+
+#Airbnb_Sydney$property_type
+class(Airbnb_Sydney$property_type)
+anyNA(Airbnb_Sydney$property_type)
+head(summary(as.factor(Airbnb_Sydney$property_type)))
+
+#Airbnb_Sydney$property_type
+class(Airbnb_Sydney$host_since)
+anyNA(Airbnb_Sydney$host_since)
+head(sort(as.Date(Airbnb_Sydney$host_since, tryFormats = c("%m/%d/%y")), decreasing = T))
+tail(sort(as.Date(Airbnb_Sydney$host_since, tryFormats = c("%m/%d/%y")), decreasing = T))
+
+#Airbnb_Sydney$price
+anyNA(Airbnb_Sydney$price)
+class(Airbnb_Sydney$price)
+price_num = as.numeric(gsub("[\\$]", "", Airbnb_Sydney$price), length(2))    
+head(summary(price_num))
+
+#Airbnb_Sydney$cleaning_fee
+anyNA(Airbnb_Sydney$cleaning_fee)
+class(Airbnb_Sydney$cleaning_fee)
+clean_fee = as.numeric(gsub("[\\$]", "", Airbnb_Sydney$cleaning_fee), length(2))    
+head(summary(clean_fee))
+```
+
+I also looked at the different review variables and super host variables. I thought these variables would also offer insight, and possbility overlap. Upon further inspection, I can see that the distribution of the review_rating and review_value columns are very similar (just on a different scale). Reviews_per_month looked interesting, but actually didn't hold much data, and we can see the distribution is really skewed. The superhost variable did not offer much in terms of insight at this stage, and is a collection of true and false values. 
+
+In general, it looks like the data from most variables is skewed, which will be something to keep in mind for analysis. 
+
+```{r}
+# Looking at some of the different "review" columns to see which my be useful later and the superhost column
+
+#Airbnb_Sydney$review_scores_value
+class(Airbnb_Sydney$review_scores_value)
+summary(Airbnb_Sydney$review_scores_value)
+
+#Airbnb_Sydney$review_scores_rating
+class(Airbnb_Sydney$review_scores_rating)
+summary(Airbnb_Sydney$review_scores_rating)
+
+#Airbnb_Sydney$reviews_per_month
+class(Airbnb_Sydney$reviews_per_month)
+summary(Airbnb_Sydney$reviews_per_month)
+hist(Airbnb_Sydney$reviews_per_month, main = "Distribution of Reviews per Month", xlab = "Reviews per Month")
+
+#Airbnb_Sydney$host_is_superhost
+class(Airbnb_Sydney$host_is_superhost)
+summary(Airbnb_Sydney$host_is_superhost)
+head(Airbnb_Sydney$host_is_superhost)
+
+```
+
+
+#### Q3
+
+##### 3.1
+
+We have mostly character vectors, which I will change to integer, dates and factors for visualization and analysis. Of the possible numerical variables, it looks like we have only discrete variables. To visualize this, I will use scatter plots, barplots, boxplots, and denisty plots. 
+
+```{r}
+# what types of data are there?
+apply(Airbnb_Sydney, 2, class)
+```
+
+##### 3.2
+
+```{r}
+# exploring the price variable using histograms and density plots
+
+hist(price_num, main = "Distribution of Price", xlab = "Price in dollars")
+
+plot(density(price_num, na.rm = T), main = "Distribution of Price", xlab = "Price in dollars")
+```
+
+```{r fig.height=7, fig.width=10}
+
+# looking at price and other variables
+# looking at review columns and super host
+
+boxplot(price_num~
+          as.factor(Airbnb_Sydney$property_type), 
+        at = rank(tapply(price_num, Airbnb_Sydney$property_type, mean)), las =2, 
+        main = "Average Price of Airbnb per Property Type",
+        ylab = "Price", cex.names=0.4)
+
+plot(price_num~as.factor(Airbnb_Sydney$host_is_superhost), main = "Price Organized by Super Host Status",
+     xlab = "Super host status", ylab = "Price")
+
+plot(Airbnb_Sydney$review_scores_rating~as.factor(Airbnb_Sydney$host_is_superhost), main = "Ratings Organized by Super Host Status",
+     xlab = "Super host status", ylab = "Rating")
+```
+
+```{r fig.height=6, fig.width=10}
+
+# looking at property type distribution with maximum and minimum plotted over top
+
+plot(sort(factor(Airbnb_Sydney$property_type, 
+                       levels = unique(Airbnb_Sydney$property_type)), decreasing = T), las=2, main = "Property Type Distribution", ylab = "Count of Property Types")
+
+onemax <- by(price_num, Airbnb_Sydney$property_type, max)
+means <- by(price_num, Airbnb_Sydney$property_type, min)
+
+points(onemax, pch=9)
+points(means, pch=7)
+legend(legend = c("Maximum Price", "Minimum Price"), lty = c(1, 1), pch = c(9, 7), "topright")
+```
+
+```{r}
+
+# looking at host since dates and reviews
+
+plot(as.Date(Airbnb_Sydney$host_since, tryFormats = c("%m/%d/%y")), 
+            main = "Distribution of Host Sign-Up Dates", xlab = "Frequency",
+     ylab = "Year a Host Signed Up")
+
+plot(Airbnb_Sydney$reviews_per_month~as.Date(Airbnb_Sydney$host_since, tryFormats = c("%m/%d/%y")),
+     main = "Reviews per Month by Host Sign-up Year", xlab = "Year a Host Signed Up", 
+     ylab = "Number of Reviews per Month")
+
+```
+
+##### 3.3
+
+Visualizing the data showed me the distribution and potential relationship between the variables: price (reamed price_num), super_host, property_type, host_since, and review_per_month.
+
+First, I focused on the price variable, which I converted to a numeric data type. I plotted it as both a histogram and a density plot. The density plot shows the overall trend better, because I have a smooth curve that that shows two peaks close together, and the sharp drop in the number of properties listed for more than 200 dollars a night. The histrogrm shows me more details, however, and I can see the individual frequencies for each category. For exploring the data, the histogram is better. As a presentation tool, the denisty plot is better. 
+
+Second, I looked at price in relation to property type using boxplots. I plotted the property type and ranked the properites according to the average price. Here we can see the trend in mean price, and also the amount of variance in price for each property type. Here is some data that will come in handy in the analysis phase. Property types that stand out are apartments, boats, houses, and townhomes. While some properites had massive variance, others did not, such as islands and cottages. Further analysis is needed here. I also organized price by super host status, but nothing interesting appeared at this initial stage, and may it require including other variables to see if super host status influences the data. 
+
+To get a better idea about what is going on with property types, I plotted a barchart to get a look at the distribution, and plotted the mean price overtop. So the same data, but looking at it in a different way. Here we can see that there are many apartment listed, followed by houses and townhomes. Here it makes sense that their is variance in the properities listed the most. It also looks like some averages are missing for some property types. The data looks to be skewed in favor of apartments, with little or no data for the majority of the property types. 
+
+I then looked at the distribution of host sign-up dates, and we can a drastic increase in hosts from 2010 to 2014. I also looked at the number of reviews organized by host sign up date, and we can see that the data is messy, but there is a general trend where there are more reviews for more recent dates. More analysis is needed here. 
+
+#### Q4
+
+##### 4.1
+
+The number of reviews is the total number of reviews for listing, so we can use this varialbe to infer how often a listing has been rented and reviewed and how long it's been listed. This is useful for looking at a property's overall business. The number of reviews per month gives us more information on how often a listing was rented at time intervals. We can see how busy a property is or isn't and look for peak times. These variables are similar in that they convey information about freauency of use, but one gives us a total and one gives us a number for a short period of time. 
+
+From the analysis below, it looks like there are 25 host ids that are in the top 100 listings for number of reviews and for number of reviews per month.  
+
+```{r}
+# create a dataframe for reviews and host id
+id_num = Airbnb_Sydney[,c("host_id", "number_of_reviews", "reviews_per_month")]
+
+# subset and order by number of reviews
+dis_num = id_num[order(id_num$number_of_reviews, decreasing = T), ]
+top_total = head(dis_num, n=100L)
+
+# subset and order by reviews per month
+dis1_num = id_num[order(id_num$reviews_per_month, decreasing = T), ]
+top_monthly = head(dis1_num, n=100L)
+
+# check for overlapping host ids
+top_monthly$host_id %in% top_total$host_id
+sum(as.numeric(top_monthly$host_id %in% top_total$host_id))
+```
+
+Taking a look at this relationship visually, we can see that the two variables are closely related, with a higher number overall reviews being correlated with a higher number of reviews per month. This does suggest some colinearity between the two variables. I also looked at the distriubtion of both variables, and they look similar. 
+
+```{r}
+plot(Airbnb_Sydney$reviews_per_month~Airbnb_Sydney$number_of_reviews,
+     main = "Number of Reviews Compared to Reviews per Month", xlab = "Number of reivews",
+     ylab = "Reviews per Month")
+
+hist(Airbnb_Sydney$number_of_reviews, xlim = c(0,200), breaks = 50, 
+     main = "Distribution of Number of Reviews", xlab = "Number of Reviews")
+hist(Airbnb_Sydney$reviews_per_month, 
+     main = "Distribution of Reviews per Month", xlab = "Reviews per Month")
+
+```
+
+##### 4.2 
+
+I also looked at the number of bedrooms and the number of beds in terms of a relationship. We can see that with an increase in bedrooms there is also an increase in the number of beds. This implies that their is a relationship between these two variables and possible colinearity. From both of these variables, we can infer the size of the property and how many peole can stay at this listing. 
+
+```{r}
+
+# number of bedrooms to number of beds
+
+plot(Airbnb_Sydney[order(Airbnb_Sydney$bedrooms, decreasing = T), 
+              c("bedrooms", "beds")], type = "p", main = "Number of Bedrooms and Beds")
+
+# removed outliers
+
+plot(Airbnb_Sydney[order(Airbnb_Sydney$bedrooms, decreasing = T), 
+              c("bedrooms", "beds")], type = "p", main = "Number of Bedrooms and Beds",
+     xlim = c(0,10), ylim = c(0,20))
+```
+
+Next, I looked at zipcode and cities, which do have considerable overlap. We can see from the dataframe that I created that each zipcode corresponds to one or two cities. We can also see the reverse when ordering by city. This means that we only need one of these variables in analysis, as they both represent similar data. 
+
+```{r}
+
+ord_zip = Airbnb_Sydney[order(Airbnb_Sydney$number_of_reviews, decreasing = T), c("host_id","zipcode","city","number_of_reviews")]
+
+top_zip = head(ord_zip, n=100L)
+top_zip
+
+```
+
+I also looked at the relationship between the number of beds and the number people a listing would accommodate. We can see that there is an increase in the number of beds and the number of people allowed to stay. It's not quite a linear looking relationship, but it is enough overlap to suggest the two are related. 
+
+```{r}
+
+# number of beds and accommodation numbers
+plot(Airbnb_Sydney$accommodates~Airbnb_Sydney$beds, type ="p", 
+     main = "Accommodates Number by Number of Beds", xlab = "Number of Beds",
+ylab = "Accommodation Number")
+
+# remove outliers
+plot(Airbnb_Sydney$accommodates~Airbnb_Sydney$beds, type ="p", xlim= c(0,15), main = "Accommodates Number by Number of Beds with Outliers Removed", xlab = "Number of Beds",
+ylab = "Accommodation Number")
+```
+
+#### Q5
+
+1. I think that there is an optimal price range to attract a high volumne of customers. Listings that fall into this range will have more overall reviews, which will be measured by the number of reviews per month and total reviews. I will start by looking the range and distribution of overall price, and then look at that distriubtion by location (city), because I think that optimal price range will depend on the location. I will then group the prices into bins, and look at how many reviews per month fall into each price range bin. I will include other variable in this analysis such as property type, number of people staying there, and location. 
+
+2. I think that hosts who have been using Aribnb longer will have higher review ratings. I will use the host_since date variable, number of reviews, and ratings to investigate this. I think super host status will need to be held constant, as well as price, location, property type, and beds. 
+
+3. I think that a high cleaning fee will lead to lower review ratings and less customers. I will start this analysis by looking at the distribution of the cleaning fee, and then plot that as function of the total reviews and reviews per month, and reviews on cleanliness. I will include other functions such as property type, price, location and number of people staying that I think will influence the analysis. I think price and property type in particular will need to be held constant. So I would look at cleaning fees for apartments or houses only to and number of reviews to understand this relationship. 
+
+
+## Part 2
+
+#### Q6
+
+##### 6.1
+
+Below, I have sorted the number of reviews by property type, and sorted them by their average review rating. We can see that apartments have the highest average reivews, and most total number of reivews. After that, we can see that islands and chalet's also have high average reviews, but not very many total reviews. Apartments have the most reviews overall, but not the highest average. Most of the property types in the data are apartments, so this makes sense. 
+
+```{r fig.height=6, fig.width=10}
+boxplot(Airbnb_Sydney$number_of_reviews~
+          as.factor(Airbnb_Sydney$property_type), 
+        at = rank(tapply(Airbnb_Sydney$review_scores_rating, 
+                         Airbnb_Sydney$property_type, mean)), las =2, 
+        main = "Number of Reviews by Property Type Sorted by Review Rating",
+        ylab = "Number of Reviews")
+```
+
+##### 6.2
+
+From the graph below, we can see that the room types with the highest total reviews for the top ten property types go to the entire home, or some cases just the private room. Shared rooms (across property types) do not have as many total reviews, or any at all. People seem to review the entire listing experience more than they do just a private room or shared room experience. In terms of the bed types, we can see that most of these listings have real beds (shown in orange), with a few execptions. 
+
+```{r fig.height=6, fig.width=10}
+library(lattice)
+
+# create table
+pnum = as.data.frame(table(Airbnb_Sydney$property_type))
+
+# order table
+rpnum = pnum[order(-pnum$Freq), ]
+
+# subset for the top 10 property types
+order_prop = as.data.frame(Airbnb_Sydney[c(Airbnb_Sydney$property_type=="Apartment" 
+                           | Airbnb_Sydney$property_type=="House" 
+                           | Airbnb_Sydney$property_type=="Townhouse" 
+                           | Airbnb_Sydney$property_type=="Condominium" 
+                           | Airbnb_Sydney$property_type=="Guest suite" 
+                           | Airbnb_Sydney$property_type=="Guesthouse" 
+                           | Airbnb_Sydney$property_type=="Loft" 
+                           | Airbnb_Sydney$property_type=="Villa" 
+                           | Airbnb_Sydney$property_type=="Bungalow" 
+                           | Airbnb_Sydney$property_type=="Cottage"),
+                           c("property_type", "number_of_reviews", "room_type", "bed_type")])
+
+
+# create factors from bed numbers
+bed_col = cut(as.numeric(order_prop$bed_type), breaks = 5)
+col_test = c("red", "blue", "green", "yellow", "orange")
+
+# subset bed categories and colors
+bed_color <- col_test[bed_col]
+
+# plot everything
+xyplot(number_of_reviews~order_prop$room_type|property_type, data = order_prop, 
+       col=as.character(bed_color), scales=list(x=list(rot=45)), 
+       main = "Property Type and Room Type Organized by the Number of Reviews", xlab = "Room Type", ylab =
+         "Number of Reviews", 
+       auto.key = T)
+
+```
+
+##### 6.3
+
+To explore my first hypothesis, I used boxplots to explore how price is related the number of reviews for a listing. I hypothesized that their is an optimal price range to get the most possible reviews. I created categories for price ranges, and plotted the number of reviews, review ratings, and monthly reviews in these categories. 
+
+From the visuals it is clear that the number of reviews vary the most (from 10 to less than 20) when the price is lower. Higher priced listings have a smaller range of ratings, as well as an average that is closer to 10. This could also be because higher priced listings are rented less (there's less data to work with). To further investigate this, we can look at the next graph, also a boxplot, and see that cheaper properties have more ratings per month, which could indicate that cheaper properties are rented more often. However, properties are are in the 100-300 range get the most reviews per month. This is also supported in the next graph, where we can see the total number of reviews are sorted by price category, and we see a similar pattern for the 100-200 dollar category. I used boxplots to show the distributions between different categories for easy comparison. 
+
+```{r fig.height=6, fig.width=10}
+price_factor <- cut(x = as.numeric(price_num), breaks = 10)
+
+plot(Airbnb_Sydney$review_scores_rating~price_factor, las=2,
+     main = "Ratings by Price", xlab = "", ylab = "Review  Ratings")
+
+plot(Airbnb_Sydney$reviews_per_month~price_factor, las= 2,
+     main = "Monthly Reviews by Price", xlab = "", ylab = "Monthly Reviews")
+
+plot(Airbnb_Sydney$number_of_reviews~price_factor, las=2,
+     main = "Number of Reviews by Price", xlab = "", ylab = "Total Reviews")
+
+```
+
+To explore my second hypothesis, I used scatterplots to explore how host sign up date is related the number of bookings and review ratings for a listing. I hypothesized that hosts how have used Aribnb longer will have better ratings. 
+
+The first and second visuals shows us that number of reviews and ratings grow with more recent host sign up dates, with the range of ratings increasing as more hosts sign up. The third visual shows host sign up dates by price, with the color indicating the number of beds in a listing. We can see that price tends to go up with the number of beds, and that listings with more beds have appeared with more recent listings. I used scatterplots to show the relationship between ratings, number of reviews, and price to host sign up.  
+
+```{r fig.height=6, fig.width=10}
+library("RColorBrewer")
+
+Airbnb_Sydney$host_data = as.Date(Airbnb_Sydney$host_since, tryFormats = c("%m/%d/%y"))
+
+plot(Airbnb_Sydney$reviews_per_month~as.Date(Airbnb_Sydney$host_since, tryFormats = c("%m/%d/%y")), main = "Number of Reviews by Host Since Year",
+      xlab = "Host Since Year", ylab = "Total Reviews")
+
+plot(Airbnb_Sydney$review_scores_rating~as.Date(Airbnb_Sydney$host_since, tryFormats = c("%m/%d/%y")), main = "Ratings by Host Since Year",
+      xlab = "Host Since Year", ylab = "Review Rating")
+
+beds_col = cut(as.numeric(Airbnb_Sydney$beds), breaks = 5, dig.lab = 1)
+rCols <- brewer.pal(5, name = "Set1")
+brCols <- rCols[beds_col]
+
+plot(price_num~as.Date(Airbnb_Sydney$host_since, tryFormats = c("%m/%d/%y")), 
+     col = brCols, pch = 18, cex = 0.5, main = "Listing Price by Host Since Year",
+      xlab = "Host Since Year", ylab = "Price per Night")
+legend(legend =  c("Less than 6 beds","6-12 Beds", "12-17 Beds","17-23 Beds","23-29 Beds"), fill = rCols, "topleft")
+```
+
+To explore my third hypothesis, I used scatterplots and a boxplot to explore how cleaning fees are related the number of bookings and review ratings for a listing. I hypothesized that listings with higher cleaning fees will have worse ratings. 
+
+The first and visual shows us that number of reviews by cleaning fee, and see can see the data is very skewed, with more reviews per month with less cleaning fees. There is a similar trend with the total number of reviews and cleaning fee. There is a steep drop in the number of reviews after 100 to 150 dollars. To look at this from another angle, I plotted property type by cleaning fee, and there are three property types that stand out in terms of cleaning fees- house, villa and apartment. 
+
+```{r fig.height=6, fig.width=10}
+clean_num = as.numeric(gsub("[\\$]", "", Airbnb_Sydney$cleaning_fee), length(2))  
+Airbnb_Sydney$clean_num = clean_num
+
+plot(Airbnb_Sydney$number_of_reviews~clean_num, main = "Number of Reviews by Cleaning Fee", 
+     xlab = "Cleaning Fee", ylab = "Number of Reviews")
+
+plot(Airbnb_Sydney$reviews_per_month~clean_num, main = "Reviews per Month by Cleaning Fee", 
+     xlab = "Cleaning Fee", ylab = "Number of Reviews")
+
+plot(clean_num~as.factor(Airbnb_Sydney$property_type), las=2, 
+     main = "Property Types by Cleaning Fee", 
+     xlab = "", ylab = "Cleaning Fee")
+
+```
+
+#### Q7
+
+##### 7.1
+
+I computed this step eariler. Here is the code again:
+
+```{r}
+price_num = as.numeric(gsub("[\\$]", "", Airbnb_Sydney$price), length(2))  
+head(price_num)
+```
+
+##### 7.2
+
+```{r}
+# convert to character
+am_char = as.character.factor(Airbnb_Sydney$amenities)
+
+# split on comma
+am_char_split = strsplit(am_char,',')
+
+# iterate over and get length for each item in list
+am_length = lapply(am_char_split, length)
+head(am_length)
+
+# add to dataframe
+Airbnb_Sydney$am_length = I(am_length)
+```
+
+##### 7.3
+
+Below, I looked the average review score rating for each cancellation policy. The data is very skewed, with only a few values for the "strict 30 days" and "strict 60 days" categoies. We can see the ratings mean for the "strict 30 days" is the lowest at 80. The moderate, flexible and 14 day cancellation policy all have high review ratings between 93-95. This is further illustrated in the visual. 
+
+```{r fig.height=6, fig.width=10}
+rev_cancel = Airbnb_Sydney[,c("review_scores_rating", "cancellation_policy", "host_is_superhost")]
+
+moderate = rev_cancel[rev_cancel$cancellation_policy=="moderate",]
+flexible = rev_cancel[rev_cancel$cancellation_policy=="flexible",]
+fourteen = rev_cancel[rev_cancel$cancellation_policy=="strict_14_with_grace_period",]
+thirty = rev_cancel[rev_cancel$cancellation_policy=="super_strict_30",]
+sixty = rev_cancel[rev_cancel$cancellation_policy=="super_strict_60",]
+
+mod_mean = mean(moderate$review_scores_rating)
+flex_mean = mean(flexible$review_scores_rating)
+fourteen_mean = mean(fourteen$review_scores_rating, na.rm = T)
+thirty_mean = mean(thirty$review_scores_rating)
+sixty_mean = mean(sixty$review_scores_rating)
+
+mod_mean
+nrow(moderate)
+flex_mean
+nrow(flexible)
+fourteen_mean
+nrow(fourteen)
+thirty_mean
+nrow(thirty)
+sixty_mean
+nrow(sixty)
+
+plot(rev_cancel$review_scores_rating~rev_cancel$cancellation_policy, las=2, xlab="", ylab = "Review Ratings",
+     main = "Review Ratings by Cancellation Policy")
+```
+
+
+##### 7.4 
+
+Below, I cleaned and plotted the extra people variable, which is the price to have one extra people stay one night at a listing. I looked at this variable in comparison to reviews per month divided by total number of reviews. I looked at a number of variables I cleaned to compare including cancellation polices and super hosts, host since data and reviews per month divided by total number of reviews, and extra person price by reviews per month divided by total number of reviews. 
+
+```{r fig.height=6, fig.width=10}
+
+# clean extra person price and add to dataset
+extra_num = as.numeric(gsub("[\\$]", "", Airbnb_Sydney$extra_people), length(2))
+Airbnb_Sydney$extra_num = extra_num
+
+# add reviews per month divided by total number of reviews to dataset
+Airbnb_Sydney$review_perc = Airbnb_Sydney$reviews_per_month/Airbnb_Sydney$number_of_reviews
+
+plot(Airbnb_Sydney$extra_num~Airbnb_Sydney$number_of_reviews, main = "Extra Person Price by Number of Reviews",
+     ylab = "Price per Extra Person", xlab = "Number of Reviews")
+
+plot(Airbnb_Sydney$review_perc~Airbnb_Sydney$host_data, main = "Host Since Date by Review Percentage",
+     ylab = "Review Percentage", xlab = "Host Since Date")
+
+plot(rev_cancel$host_is_superhost~rev_cancel$cancellation_policy, main = "Super Host Status by Cancellation Policy",
+     ylab = "Super Host Status", xlab = "Cancellation Policy")
+```
+
+#### Q8
+
+I chose reviews per month as my primary variable, which I think will offer more insights into possible buisness actions I can recommend. Reviews per month offers a snapshot of a listing's activity, and we can look at other variables in more detail with this as the predictor. 
+
+I examined price, number of amenities, number of host verifications, review ratings, the price of extra people, number of people a listing accommodates, cancellation policies, number of bathrooms, number of bedrooms, and the number of beds as possible response variables. I did find a possible positive relationship between the number of amenities and reviews per month, and a possible positive relationship between the number of people accommodated and reviews per month, in addition to the relationship I outline below. 
+
+Below, I've created a model to investigate a relationship between the reviews per month and the cleaning fees. The linear model shows that the residuals are not evenly distributed around the mean (or symmetrical), so the model points are far away from the actual points in some areas. So the model isn't an ideal fit. This could be an area for further investigation. 
+
+The model also shows that for the average number of reviews per month, there is a cleaning fee of roughly 103 dollars, and when the number of reviews per month increases by 1, the cleaning fee drops by roughly 5 dollars. So there is a possible negative relationship between cleaning fees and reviews per month. 
+
+We can see from the scatter plot and abline that there is a possible negative relationship. It's not an entirely linear relationship, as we can see there is a steep curve downward between 0-2 number of reviews. It appears that listings with high cleaning fees don't have a lot of reviews per month. This could be due to a number of reasons. High cleaning fees could belong to the more expensive properities which are rented less in general, or could be in locations that have less rentals. 
+
+According to the model, there is a statistically significant relationship here, as the p values are close to zero and below 5%. 
+
+```{r fig.height=6, fig.width=10}
+clean_model = summary(lm(clean_num~Airbnb_Sydney$reviews_per_month))
+clean_model
+plot(clean_num~Airbnb_Sydney$reviews_per_month, main = "Cleaning Fee by Number of Reviews", ylab = "Cleaning Fee", xlab = "Number of Reviews")
+abline(clean_model, col = "Red")
+
+```
+
+
+## Part 3
+
+#### Q 9.1
+
+```{r fig.height=6, fig.width=10}
+host_response_num = as.numeric(gsub("%", "", Airbnb_Sydney$host_response_rate), length(2))
+
+# look at host response rate by host since date, and super host status
+colors = c("Green", "Blue")
+
+plot(Airbnb_Sydney$host_data~host_response_num, col = colors[Airbnb_Sydney$host_is_superhost],
+     main = "Host Since Date by Host Response Rate", ylab = "Host Since Year", xlab = "Host Response Rate")
+legend(legend = c("Regular Host", "Super Host"), fill= colors, "topleft") 
+```
+
+
+##### 9.2
+
+From the mosaic plot below, we can see that super hosts tend to respond faster than regular hosts. 
+
+```{r fig.height=6, fig.width=10}
+mosaicplot(table(Airbnb_Sydney$host_response_time,Airbnb_Sydney$host_is_superhost), 
+           color = c("Green", "Blue"), main = "Super Host Status by Response Time",
+           ylab = "Super Host Status", xlab = "Host Response Time")
+legend(legend = c("True", "False"), fill = c("Green", "Blue"), "topright")
+```
+
+#### Q10
+
+##### 10.1
+
+The top ten words suggest that aspects of the property are mentioned often, such as the type of property, rooms within the property, and the location of the property. Also proximity words such as 'walk' appear, also an indicator for importance of location. 
+
+```{r fig.height=6, fig.width=10}
+# clean and split up description data
+des = strsplit(gsub("[^[:alnum:] ]", "", Airbnb_Sydney$description), " +")
+des_unique = length(unique(unlist(des)))
+
+# make everything lower
+des_lower = tolower(unlist(des))
+
+# put into table and dataframe
+des_freq = as.data.frame(table(des_lower))
+
+stop_words = c("a", "able", "about", "across", "after", "all", "almost", "also", "am", "among", "an", "and", "any", "are", "as",
+"at", "be", "because", "been", "but", "by", "can", "cannot", "could", "dear", "did", "do", "does", "either", "else", "ever", "every", "for",
+"from", "get", "got", "had", "has", "have", "he", "her", "hers", "him", "his", "how", "however", "i", "if", "in", "into", "is", "it", "its", "just",
+"least", "let", "like", "likely", "may", "me", "might", "most", "must", "my", "neither", "no", "nor", "not", "of", "off", "often", "on",
+"only", "or", "other", "our", "own", "rather", "said", "say", "says", "she", "should", "since", "so", "some", "than", "that", "the", "their",
+"them", "then", "there", "these", "they", "this", "is", "to", "too", "was", "us", "wants", "was", "we", "were", "what", "when", "where",
+"which", "while", "who", "whom", "why", "will", "with", "would", "yet", "you", "your")
+
+# remove stop words
+top_des = as.data.frame(des_freq[!(des_freq$des_lower%in%stop_words),])
+
+head(top_des[order(top_des$Freq, decreasing = T),], n=10L)
+
+```
+
+##### 10.2
+
+The averages below show that lsitings with descriptions with the word 'beach' or 'beaches' in them are priced moderately higher than listings without those words in the description. 
+
+```{r fig.height=6, fig.width=10}
+Airbnb_Sydney$price_num = price_num
+# find words by subsetting and grep()
+the_beach = Airbnb_Sydney[grep("beach", Airbnb_Sydney$description), c("host_id","price_num")]
+the_beaches = Airbnb_Sydney[grep("beaches", Airbnb_Sydney$description), c("host_id","price_num")]
+
+# means
+mean(the_beach$price_num, na.rm = T)
+mean(the_beaches$price_num, na.rm=T)
+mean(Airbnb_Sydney$price_num, na.rm = T)
+
+top_freq = function(input, word){
+  # Find high frequency words in a dataset. Input is a vector and the string to look for. Will return a row from a tabel with the word and the frequency. 
+  des = strsplit(gsub("[^[:alnum:] ]", "", input), " +")
+  des_lower = tolower(unlist(des))
+  des_freq = as.data.frame(table(des_lower))
+  top_des = as.data.frame(des_freq[!(des_freq$des_lower%in%stop_words),])
+  word_freq = top_des[top_des$des_lower==word,]
+  returnValue(word_freq)
+}
+
+# calling function
+
+top_freq(Airbnb_Sydney$description, "apartment")
+top_freq(Airbnb_Sydney$description, "bed")
+```
+
+```{r}
+row_freq = function(input, word){
+  # function to indicate the frequency of a word in a list. Input is a list of vectors and the string to look for. Will return a list with integers to indicate the frequency of a word. ) means that word does not appear in that row. 
+  des = strsplit(gsub("[^[:alnum:] ]", "", input), " +")
+  pattern = lapply(des, grep, pattern=word)
+  lens = lapply(pattern, length)
+  returnValue(lens)
+}
+
+head(row_freq(Airbnb_Sydney$description, "beach"))
+```
+
+##### 10.3
+
+I looked the words 'apartment', 'bed', and 'house'. I can see the average price of listings with those words differs quite a bit. I also compared this with super host status for further insight. 
+
+```{r fig.height=6, fig.width=10}
+the_apt = Airbnb_Sydney[grep("apartment", Airbnb_Sydney$description),
+                        c("host_is_superhost", "price_num")]
+the_bed = Airbnb_Sydney[grep("bed", Airbnb_Sydney$description), 
+                        c("price_num", "host_is_superhost")]
+sup_house = Airbnb_Sydney[grep("house", Airbnb_Sydney$description), 
+                          c("host_is_superhost", "price_num")]
+
+mean(the_apt$price_num, na.rm = T)
+mean(the_bed$price_num, na.rm = T)
+mean(sup_house$price_num, na.rm = T)
+mean(Airbnb_Sydney$price_num, na.rm = T)
+
+plot(the_apt, main = "Listing Price by Super Host Status where 'Apartment' is mentioned", xlab = "Super Host Status", ylab = "Price per Night")
+
+plot(sup_house, main = "Listing Price by Super Host Status where 'House' is mentioned", xlab = "Super Host Status", ylab = "Price per Night")
+
+plot(as.numeric(the_bed$price_num)~the_bed$host_is_superhost, main = "Listing Price by Super Host Status where 'bed' is mentioned", xlab = "Super Host Status", ylab = "Price per Night")
+
+```
+
+###### 10-2
+
+###### 10-2.1
+
+I chose to look at cities, because I thought zipcodes would include a wider area, which could introduce more variability in the data. Cities seemed liked a good way to hold variables like price constant. 
+
+```{r}
+
+# Use for loop to get the number of host ids for each unique city name and add to a dataframe
+cities = data.frame()
+for(i in unique(Airbnb_Sydney$city)){
+  city_test = Airbnb_Sydney[Airbnb_Sydney$city==i, c("host_id")]
+  city_len = length(Airbnb_Sydney[Airbnb_Sydney$city==i, c("host_id")])
+  cities1 = data.frame("City" = i,city_len)
+  cities = rbind(cities, cities1)
+  returnValue(cities)
+}
+
+# print the top 100 cities with the most listings
+head(cities[order(cities$city_len, decreasing = T),], n=100L)
+
+```
+
+```{r}
+
+# calculate weighted means by multiplying the number of reviews by review ratings
+weighted = Airbnb_Sydney$number_of_reviews*Airbnb_Sydney$review_scores_rating
+
+# add to dataframe
+Airbnb_Sydney$weigted = weighted
+
+# subset for certain columns
+weight = Airbnb_Sydney[,c("host_id","weigted","city")]
+
+# aggregate data by city and get mean, print top 100
+head(aggregate(weight[2], by=list(weight$city), mean), n=100L)
+```
+
+From this graph we can see a clear downward trend when the cities are organized by weighted mean. We can see which cities have a high number of total reviews and reviews per month, and what that average is. This tells us which cities have the most sustained, overall activity. 
+
+```{r fig.height=6, fig.width=10}
+
+# subet for a separate dataframe
+city_df = Airbnb_Sydney[,c("city","number_of_reviews","review_scores_rating")]
+
+# calculate weighted means
+m_w = city_df$number_of_reviews * city_df$review_scores_rating
+city_df$weights = m_w
+
+# use aggregate function
+city_agg = aggregate(city_df$weights, 
+                     by=list(city = city_df$city), 
+                     mean)
+
+city_100 =  head(city_agg[order(city_agg$x, decreasing = T),], n=50L)
+
+dotchart(city_100$x, labels = city_100$city, cex = .5, main = "City by Weighted Mean", xlab = "Number of Reviews x Reviews per Month")
+
+```
+
+##### 10-2.2
+
+```{r fig.height=6, fig.width=10}
+city_beds = Airbnb_Sydney[,c("city","bedrooms","review_scores_rating")]
+
+
+m_b = city_beds$bedrooms * city_beds$review_scores_rating
+city_beds$weights = m_b
+
+city_beds_agg = aggregate(city_beds$weights, 
+                     by=list(city = city_beds$city), 
+                     mean)
+
+beds_100 =  head(city_beds_agg[order(city_beds_agg$x, decreasing = T),], n=50L)
+
+dotchart(beds_100$x, labels = beds_100$city, cex = .5, main = "City by Bed Weighted Mean", xlab = "Number of Bed x Review Score Rating")
+
+rug(beds_100$x, ticksize = 0.3)
+
+```
+
+```{r fig.height=6, fig.width=10}
+rooms = Airbnb_Sydney[,c("room_type","number_of_reviews","review_scores_rating")]
+
+r_r = rooms$number_of_reviews * rooms$review_scores_rating
+rooms$weights = r_r
+
+rooms_agg = aggregate(rooms$weights, 
+                          by=list(room_type = rooms$room_type), 
+                          mean, na.rm =T)
+
+barplot(rooms_agg$x, names.arg = rooms_agg$room_type, main = "Room Type by Weighted Mean", xlab = "Number of Reviews x Review Score Rating")
+
+```
+
+## Part 4
+
+Below, I looked at the host verfication information for further insights. I split and cleaned verification information and plotted super host information and reviews per month. I also looked at a possbile linear relationship between the number of host verifications and reviews per month, and saw a positive relationship. We can also see some verification types are used way more than others, and that super hosts tend to have more types of verfication.  
+
+```{r fig.height=5, fig.width=10}
+
+# convert and split host verification
+ver_char = as.character.factor(Airbnb_Sydney$host_verifications)
+ver_char_split = strsplit(ver_char,',')
+
+# get number of verfications, assign to dataframe
+ver_length = lapply(ver_char_split, length)
+Airbnb_Sydney$ver_length = I(ver_length)
+
+# clean data
+
+ver_sub1 = gsub("^[\\[']", "", unlist(ver_char_split))
+
+ver_sub2 = gsub("\\']", "", ver_sub1)
+
+ver_sub3 = gsub(" '", "", ver_sub2)
+
+ver_sub4 = gsub("'","", ver_sub3)
+
+ver_sub5 = gsub("]", NA, ver_sub4)
+
+ver_df = as.data.frame(table(ver_sub5))
+
+# fit linear model
+
+summary(lm(as.numeric(Airbnb_Sydney$ver_length)~Airbnb_Sydney$reviews_per_month))
+
+# plot linear model
+plot(Airbnb_Sydney$reviews_per_month~as.numeric(Airbnb_Sydney$ver_length), main = "Number of Host Verifications by Reviews per Month",
+     xlab = "Reviews per Month", ylab = "Number of Verification Types")
+
+# plot number of verification type counts
+
+barplot(ver_df$Freq[order(ver_df$Freq, decreasing = T)], names.arg = ver_df$ver_sub5, las =2,
+        main = "Count of Verification Types", ylab = "Frequency", cex.names = 0.6)
+
+# plot number of verification types by super host status
+
+mosaicplot(table(as.numeric(Airbnb_Sydney$ver_length),Airbnb_Sydney$host_is_superhost), 
+           color = c("Green", "Blue"), main = "Super Host Status by Number of Verification Types",
+           ylab = "Super Host Status", xlab = "Number of Verification Types")
+legend(legend = c("True", "False"), fill = c("Green", "Blue"), "bottomright")
+```
+
+I also used a function to get the percentage of times a certain verification type was used in the dataset. We can see that percentage really high for email, phone, and facebook verification types. 
+
+```{r}
+ver_f = function(text){
+  # this function take in a string of text to search verfification types and a variable name to subset with
+  # it returns the percentage of time a verification type was mentioned
+  input = grepl(text, Airbnb_Sydney$host_verifications)
+  yes_input = Airbnb_Sydney$host_verifications[input]
+  len_input = round(length(yes_input)/length(Airbnb_Sydney$host_verifications), 3)
+  print(len_input)
+}
+
+ver_f("email")
+ver_f("phone")
+ver_f("government_id")
+ver_f("facebook")
+ver_f("reviews")
+ver_f("work_email")
+ver_f("jumio")
+```
+
+## Part 5
+
+My analysis focused on the verfication types, price, property types, super host, cleaning fees, review ratings, and number of reviews. I found a number of interesting patterns:
+  1. Super hosts tend to have more vertification types listed. They also appear to respond faster to customer inquires than regular hosts. Super hosts also had a higher response rate, with the lowest response rate at about 63 percent. So, is it worth it to be a superhost? When comparing price and superhost status, there does not seem to be a significant difference- the average and range are roughly the same. When comparing reveiw ratings and super host status, super host do have a higher average, a higher number of reviews, and more reviews per month. Also, when looking at super host status and different description words, such as 'house', there is a small difference in price. A business action could be taken to encourage or incentivize regular hosts to upgrade to super hosts to increase traffic and reviews. 
+  2. Additional costs and rules such as cancellation policies and cleaning fees had an effect on the number of reviews on listing. It appears there were fewer total reviews for listings that charged extra or were stricter on policies. Even a moderate increase in cleaning fees was associated with less reviews. It could also be that listings with higher cleaning fees were also more expensive, or rented less for other reasons. However, higher charges for extra people also led to less reviews overall. A business action to address this could include encouraging hosts to roll cleaning prices into the overall price, or allowing no extra people. Any way to reduce the number of extra costs would be a good action to take.   
+  3. Location and property types significantly affected how often a listing is rented. Certain cities and property types where listed way more than others. Even location or property specific words in the listing description contributed to a difference in review numbers and ratings. I would recommend that hosts use certain words to attract more customers in their description. 
+  4. Having extra perks, such as amenities, increased business. A higher number of amenities led to more reviews. I would encourage hosts to list all possible amenities in a listing to attract more buisness and reviews. 
+  
+  A general issue I struggled with was the skew of the data. The number of reviews and reviews per month was highly skewed, making it difficult to detect trends and find conclusions. The property type variable was also drastically skewed, with the vast majority of properities being apartments. This is reflected in my analysis and visualizations. 
+
+## Part 6
+
+  Throughout this project, I iterated over the six divisions of data science to extract as much information as possible from a secondary dataset to generate insights from the data. There were some steps that I iterated over more than others, and that includes the data exploration step. After reading the data in as a csv file, I got some basic information about the data and then started to look at individual columns. 
+  The 50 Years of Data Science article mentions that data exploration is about 80% of the work, and that felt accurate while working with this dataset. I looked at many columns individually to understand their class, missing elements, and potential for insight. To get a better understanding of the data, I created several plots to look at the distribution of individual variables, and also to take a look at descriptive statistics with different variable combinations. This helped me determine the depth and richness of the information, provided hints at what to expect in the analysis phase, and highlighted what data needed to be cleaned. Hypothesis were formed at the conclusion of the data exploration phase. 
+  The data representation and transformation process for this project was simple- we worked with a csv file and did not have to do anything complicated to read it in, or to start exploring. The computing with data step was also a non-issue with this project because we just used R, and didn't combine any other computing methods or sources. 
+  I started the data cleaning process with some obvious fixes such as removing the dollar sign from price and converting the host_since variable to a proper date format. I also cleaned several of the character and list variables to do text analysis. This phase also required going back and reviewing my data explortion phase to decide what columns to focus on and what classes they needed to be. Cleaning the data allowed me to aggregate and group the data to start looking for potential relationships between variables. 
+  The data analysis phase followed next to further investigate potential relationships, with more data visualization to illustrate what was found. This was part of the data visualization and presentation phase of the lifecycle. After compiling the analysis, I created visuals to show the nature of the relationships I found and to show trends in the data. This phase included raw numbers from the analysis and data visualizations. The data modeling phase was touched on briefly in this project as we did some basic statistics. This analysis leaned toward the generative analysis side of things and not so much predictive analysis. 
+  The last division, science of data science, we left out of this project. Although there is potential to look at how I understood, cleaned, analyzed and visualized this data, we did not do this here. 
+  This project required me to keep the whole project and goal in mind even as I was working on individual parts of the project. As a result, I continued to go back and work on previous steps, and slowly came to conclusions after much tweaking. 
+  I did the project in the WholeTale tool to work in a virtual environment and have a reproducable product at the end of the class. I did my best to record my data lifecycle process by documenting my findings and by adding plenty of comments in my code, to illustrate my workflow. To me, the data science lifecycle is a constant practice of the science of science, and I added to it by processing this secondary dataset for insights but also by putting forth my own workflow and methods. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
